@@ -3516,6 +3516,21 @@ const SecurityDashboard = () => {
     setStats(prev => ({ ...prev, in: totalStudents - outRequests.length }));
   }, [totalStudents, outRequests]);
 
+  const stopScanner = async () => {
+    if (isTransitioningRef.current) return;
+    if (scannerRef.current && scannerRef.current.isScanning) {
+      isTransitioningRef.current = true;
+      try {
+        await scannerRef.current.stop();
+        setIsActuallyScanning(false);
+      } catch (e) {
+        console.error("Failed to stop scanner", e);
+      } finally {
+        isTransitioningRef.current = false;
+      }
+    }
+  };
+
   const startScanner = async () => {
     if (isTransitioningRef.current) return;
     const readerElement = document.getElementById("reader");
@@ -3571,8 +3586,7 @@ const SecurityDashboard = () => {
     const newMode = cameraMode === 'environment' ? 'user' : 'environment';
     setCameraMode(newMode);
     if (scannerRef.current && scannerRef.current.isScanning) {
-      await scannerRef.current.stop();
-      setIsActuallyScanning(false);
+      await stopScanner();
       // Small delay before restart
       setTimeout(() => startScanner(), 100);
     }
@@ -3585,12 +3599,10 @@ const SecurityDashboard = () => {
       }, 1000);
       return () => {
         clearTimeout(timer);
-        if (scannerRef.current && scannerRef.current.isScanning) {
-          scannerRef.current.stop().catch(e => console.error("Failed to stop scanner", e));
-        }
+        stopScanner();
       };
-    } else if (scannerRef.current && scannerRef.current.isScanning) {
-      scannerRef.current.stop().catch(e => console.error("Failed to stop scanner", e));
+    } else {
+      stopScanner();
     }
   }, [isScanning, scannedRequest, token]);
 
@@ -3603,13 +3615,7 @@ const SecurityDashboard = () => {
     setError('');
     
     // Stop scanner immediately on successful scan
-    if (scannerRef.current && scannerRef.current.isScanning) {
-      try {
-        await scannerRef.current.stop();
-      } catch (e) {
-        console.error(e);
-      }
-    }
+    await stopScanner();
 
     try {
       const res = await fetch(`/api/requests/verify/${parsed.id}`, {
