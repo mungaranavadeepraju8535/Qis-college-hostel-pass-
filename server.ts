@@ -7,7 +7,7 @@ import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import { initializeApp } from "firebase/app";
 import { 
-  getFirestore, 
+  initializeFirestore,
   collection, 
   doc, 
   getDoc, 
@@ -19,7 +19,8 @@ import {
   updateDoc, 
   addDoc,
   orderBy,
-  writeBatch
+  writeBatch,
+  terminate
 } from "firebase/firestore";
 
 // Load Firebase config using fs to avoid ESM import attribute issues
@@ -48,17 +49,22 @@ try {
     console.error("CRITICAL: firebase-applet-config.json is missing projectId!");
   }
   firebaseApp = initializeApp(firebaseConfig);
+  
+  const firestoreSettings = {
+    experimentalForceLongPolling: true,
+  };
+
   // Try initializing with the specific database ID
-  db = getFirestore(firebaseApp, firebaseConfig.firestoreDatabaseId);
-  console.log("Firestore initialized with database ID:", firebaseConfig.firestoreDatabaseId);
-} catch (error: any) {
-  console.warn("Firestore initialization with specific ID failed, falling back to default database:", error.message);
   try {
-    db = getFirestore(firebaseApp);
+    db = initializeFirestore(firebaseApp, firestoreSettings, firebaseConfig.firestoreDatabaseId);
+    console.log("Firestore initialized with database ID:", firebaseConfig.firestoreDatabaseId);
+  } catch (idError: any) {
+    console.warn("Firestore initialization with specific ID failed, falling back to default database:", idError.message);
+    db = initializeFirestore(firebaseApp, firestoreSettings);
     console.log("Firestore initialized with default database.");
-  } catch (fallbackError: any) {
-    console.error("Firebase initialization failed completely:", fallbackError.message);
   }
+} catch (error: any) {
+  console.error("Firebase initialization failed completely:", error.message);
 }
 
 app.use(cors());

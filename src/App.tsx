@@ -121,7 +121,7 @@ interface FirestoreErrorInfo {
   }
 }
 
-function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+const handleFirestoreError = (error: unknown, operationType: OperationType, path: string | null) => {
   const auth = getAuth();
   const errInfo: FirestoreErrorInfo = {
     error: error instanceof Error ? error.message : String(error),
@@ -144,6 +144,32 @@ function handleFirestoreError(error: unknown, operationType: OperationType, path
   console.error('Firestore Error: ', JSON.stringify(errInfo, null, 2));
   throw new Error(JSON.stringify(errInfo));
 }
+
+const safeFetch = async (url: string, options?: RequestInit) => {
+  const res = await fetch(url, options);
+  const contentType = res.headers.get("content-type");
+  
+  if (contentType && contentType.includes("application/json")) {
+    const data = await res.json();
+    if (!res.ok) {
+      if (data.error && data.operationType) {
+        throw new Error(JSON.stringify(data));
+      }
+      throw new Error(data.message || `Request failed with status ${res.status}`);
+    }
+    return data;
+  } else {
+    // Not JSON - likely a 404 or HTML error page from a static host like Netlify
+    if (!res.ok) {
+      if (res.status === 404) {
+        throw new Error("API endpoint not found. If you are using Netlify, please ensure your backend server is running and accessible.");
+      }
+      const text = await res.text();
+      throw new Error(`Server error (${res.status}): ${text.slice(0, 100)}...`);
+    }
+    return await res.text();
+  }
+};
 
 class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean, error: Error | null }> {
   state = { hasError: false, error: null };
@@ -297,18 +323,11 @@ const LoginPage = ({ role }: { role: 'student' | 'warden' | 'security' | 'hod' }
     setError('');
 
     try {
-      const res = await fetch('/api/auth/login', {
+      const data = await safeFetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password, role }),
       });
-      const data = await res.json();
-      if (!res.ok) {
-        if (data.error && data.operationType) {
-          throw new Error(JSON.stringify(data));
-        }
-        throw new Error(data.message || "Login failed");
-      }
       login(data);
     } catch (err: any) {
       console.error(err);
@@ -3573,9 +3592,13 @@ const SecurityDashboard = () => {
       );
       setIsActuallyScanning(true);
       setError('');
-    } catch (err) {
+    } catch (err: any) {
       console.error("Scanner error:", err);
-      setError("Could not access camera. Please check permissions.");
+      if (err.name === 'NotAllowedError' || err === 'NotAllowedError') {
+        setError("Camera permission denied. Please allow camera access in your browser settings and refresh.");
+      } else {
+        setError("Could not access camera. Please check permissions and ensure no other app is using it.");
+      }
       setIsActuallyScanning(false);
     } finally {
       isTransitioningRef.current = false;

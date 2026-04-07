@@ -1,5 +1,12 @@
 import { initializeApp } from 'firebase/app';
-import { getFirestore, doc, getDocFromServer, enableIndexedDbPersistence } from 'firebase/firestore';
+import { 
+  initializeFirestore, 
+  doc, 
+  getDocFromServer, 
+  enableIndexedDbPersistence,
+  terminate,
+  clearIndexedDbPersistence
+} from 'firebase/firestore';
 import firebaseConfig from '../firebase-applet-config.json';
 
 let db: any;
@@ -31,19 +38,27 @@ async function initializeFirebase() {
     console.log("Initializing frontend Firebase with project ID:", firebaseConfig.projectId);
     app = initializeApp(firebaseConfig);
     
+    const firestoreSettings = {
+      experimentalForceLongPolling: true, // Force long polling to bypass WebSocket issues in iframes
+    };
+
     let success = false;
 
     // Try with specific database ID first if provided
     if (firebaseConfig.firestoreDatabaseId) {
       console.log("Attempting to use specific database ID:", firebaseConfig.firestoreDatabaseId);
-      db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+      db = initializeFirestore(app, firestoreSettings, firebaseConfig.firestoreDatabaseId);
       success = await testFrontendConnection(db);
     }
 
     // Fallback to default database if specific ID failed or wasn't provided
     if (!success) {
       console.log("Falling back to default database...");
-      db = getFirestore(app);
+      // If we already initialized db, we might need to terminate it before re-initializing
+      if (db) {
+        try { await terminate(db); } catch (e) {}
+      }
+      db = initializeFirestore(app, firestoreSettings);
       success = await testFrontendConnection(db);
     }
 
