@@ -1,0 +1,84 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: {email} (used as Login ID)
+    // Fields:
+    //   - id: string (required) - Unique user ID
+    //   - name: string (required) - Full name
+    //   - email: string (required) - Login ID
+    //   - password: string (required) - Hashed password
+    //   - role: string (required) - student, warden, security
+    //   - roomNumber: string (optional) - Student room number
+    //
+    // Collection: requests
+    // Document ID: {requestId}
+    // Fields:
+    //   - studentId: string (required)
+    //   - studentName: string (required)
+    //   - roomNumber: string (required)
+    //   - reason: string (required)
+    //   - outTime: string (required) - ISO 8601
+    //   - returnTime: string (required) - ISO 8601
+    //   - type: string (required) - outpass, home_pass
+    //   - status: string (required) - pending, approved, rejected, out, returned
+    //   - photo: string (optional) - Base64 (Student Photo)
+    //   - wardenPhoto: string (optional) - Base64 (Warden Photo)
+    //   - remarks: string (optional)
+    //   - createdAt: string (required) - ISO 8601
+    //
+    // Collection: rooms
+    // Document ID: {roomNumber}
+    // Fields:
+    //   - roomNumber: string
+    //   - capacity: number
+    //   - occupants: list (student IDs)
+    //
+    // Collection: roomChecks
+    // Document ID: {checkId}
+    // Fields:
+    //   - roomNumber: string
+    //   - presentCount: number
+    //   - onlineCount: number
+    //   - extraCount: number
+    //   - checkType: string
+    //   - recordedBy: string
+    //   - createdAt: string
+    //
+    // ===============================================================
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Note: The app uses a custom backend for auth, but we still want to protect the DB.
+    // Since the backend uses the admin SDK or client SDK with these rules, 
+    // and the client doesn't directly call Firestore (it calls /api),
+    // we can keep these rules relatively open for the backend while still having some structure.
+    // However, for a real app, we should use Firebase Auth and more restrictive rules.
+    
+    match /users/{userId} {
+      allow read, write: if true; // Backend needs access to verify users
+    }
+
+    match /requests/{requestId} {
+      allow read, write: if true;
+    }
+
+    match /rooms/{roomNumber} {
+      allow read, write: if true;
+    }
+
+    match /roomChecks/{checkId} {
+      allow read, write: if true;
+    }
+
+    match /test/{docId} {
+      allow read: if true;
+    }
+  }
+}

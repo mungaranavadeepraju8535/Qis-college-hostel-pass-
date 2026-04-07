@@ -1,0 +1,7 @@
+{
+  "name": "Remix: Remix: Remix: Hostel Outing Pass System",
+  "description": "A digital outing permission system for hostel students with Warden approval and Security Guard QR verification.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}

@@ -1,0 +1,49 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "A user of the system (Student, Warden, or Security Guard)",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Firebase Auth UID" },
+        "email": { "type": "string", "description": "User email" },
+        "name": { "type": "string", "description": "Full name" },
+        "role": { "type": "string", "enum": ["student", "warden", "guard"], "description": "User role" },
+        "roomNumber": { "type": "string", "description": "Student room number" }
+      },
+      "required": ["uid", "email", "name", "role"]
+    },
+    "OutingRequest": {
+      "title": "Outing Request",
+      "description": "A request for outing submitted by a student",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique request ID" },
+        "studentId": { "type": "string", "description": "ID of the student" },
+        "studentName": { "type": "string", "description": "Name of the student" },
+        "roomNumber": { "type": "string", "description": "Room number of the student" },
+        "reason": { "type": "string", "description": "Reason for outing" },
+        "outTime": { "type": "string", "format": "date-time", "description": "Expected out time" },
+        "returnTime": { "type": "string", "format": "date-time", "description": "Expected return time" },
+        "status": { "type": "string", "enum": ["pending", "approved", "rejected", "out", "returned"], "description": "Current status" },
+        "remarks": { "type": "string", "description": "Remarks from the warden" },
+        "photo": { "type": "string", "description": "Base64 student photo" },
+        "wardenPhoto": { "type": "string", "description": "Base64 warden photo" },
+        "parentsIntimated": { "type": "boolean", "description": "Whether parents were intimated" },
+        "studentPhone": { "type": "string", "description": "Student phone number" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Request creation time" }
+      },
+      "required": ["id", "studentId", "studentName", "roomNumber", "reason", "outTime", "returnTime", "status", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{uid}": {
+      "schema": "User",
+      "description": "User profiles"
+    },
+    "/outingRequests/{requestId}": {
+      "schema": "OutingRequest",
+      "description": "Outing requests"
+    }
+  }
+}
