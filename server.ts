@@ -2,7 +2,6 @@ import express from "express";
 import cors from "cors";
 import path from "path";
 import fs from "fs";
-import { createServer as createViteServer } from "vite";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import { initializeApp } from "firebase/app";
@@ -35,7 +34,7 @@ try {
   console.error("Failed to read firebase-applet-config.json:", err);
 }
 
-const app = express();
+export const app = express();
 const PORT = 3000;
 const JWT_SECRET = process.env.JWT_SECRET || "hostel-pass-secret-key";
 
@@ -794,6 +793,7 @@ async function startServer() {
 
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
+    const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
@@ -837,4 +837,6 @@ app.listen(PORT, "0.0.0.0", async () => {
   });
 }
 
-startServer();
+if (!process.env.NETLIFY) {
+  startServer();
+}
